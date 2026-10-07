@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 运行期缓存与日志
+price_cache.pkl
+report_cache.json
+*.log
+
+# 调试残留
+_diag.txt
+_out.txt
+_err.txt
+_start.log
+srvtmp_*.log

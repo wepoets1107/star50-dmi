@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>588000 科创50ETF · DMI 趋势看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --line:#e4e7ec; --text:#1f2328; --muted:#6b7280;
+    --up:#d64545; --down:#2e9e5b; --adx:#8e44ad; --pdi:#d64545; --mdi:#2e9e5b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
+  header h1{margin:0;font-size:20px;font-weight:650;letter-spacing:.2px}
+  header .sub{color:var(--muted);font-size:12.5px;margin-top:6px}
+
+  .top{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;margin-top:18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  .price-box{padding:14px 20px;min-width:190px}
+  .price-box .label{color:var(--muted);font-size:12px}
+  .price-box .big{font-size:32px;font-weight:680;line-height:1.25;margin-top:2px}
+  .price-box .chg{font-size:13px;margin-top:2px}
+  .badge{flex:1;min-width:320px;padding:14px 18px;display:flex;flex-direction:column;
+         justify-content:center;gap:6px}
+  .badge .tag{display:inline-block;align-self:flex-start;padding:4px 12px;border-radius:999px;
+              color:#fff;font-weight:640;font-size:13.5px}
+  .badge .desc{color:#374151;font-size:13px;line-height:1.5}
+
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;width:100%}
+  .card{padding:12px 14px}
+  .card .k{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:5px}
+  .card .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .card .v{font-size:22px;font-weight:660;margin-top:3px}
+
+  .sec{margin-top:20px}
+  .sec h2{font-size:14.5px;font-weight:640;margin:0 0 8px;color:#111827}
+  .chart-box{height:210px;padding:10px 12px 4px}
+  .chart-box.tall{height:240px}
+  .note{color:var(--muted);font-size:12px;line-height:1.6;margin:8px 2px 0}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);
+        border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line)}
+  th{background:#fafbfc;color:var(--muted);font-weight:600;font-size:12.5px}
+  tr:last-child td{border-bottom:none}
+  .up{color:var(--up)} .down{color:var(--down)}
+  .pill{padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+  .pill.bull{background:var(--up)} .pill.bear{background:var(--down)}
+  .pill.golden{background:#e8743b} .pill.death{background:#4b7bec}
+  .pill.adx_up{background:#8e44ad} .pill.adx_down{background:#95a5a6}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>588000 科创50ETF · DMI 趋势看板</h1>
+    <div class="sub">Wilder 标准 DMI（N=14，本地自算） · 数据至 <span id="asof">—</span> ·
+      区间 <span id="range">—</span>（<span id="bars">—</span> 根）</div>
+  </header>
+
+  <div class="top">
+    <div class="panel price-box">
+      <div class="label">最新价</div>
+      <div class="big" id="price">—</div>
+      <div class="chg" id="chg">—</div>
+    </div>
+    <div class="panel badge">
+      <span class="tag" id="badgeTag">加载中…</span>
+      <div class="desc" id="badgeDesc">正在读取数据…</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="panel card"><div class="k"><i class="dot" style="background:var(--pdi)"></i>+DI 正向</div><div class="v" id="pdi">—</div></div>
+    <div class="panel card"><div class="k"><i class="dot" style="background:var(--mdi)"></i>−DI 负向</div><div class="v" id="mdi">—</div></div>
+    <div class="panel card"><div class="k"><i class="dot" style="background:var(--adx)"></i>ADX 趋势强度</div><div class="v" id="adx">—</div></div>
+    <div class="panel card"><div class="k"><i class="dot" style="background:#95a5a6"></i>ADXR 强度评级</div><div class="v" id="adxr">—</div></div>
+  </div>
+
+  <div class="sec">
+    <h2>① 价格走势</h2>
+    <div class="panel chart-box"><canvas id="priceChart"></canvas></div>
+  </div>
+
+  <div class="sec">
+    <h2>② 方向指标 +DI / −DI</h2>
+    <div class="panel chart-box"><canvas id="diChart"></canvas></div>
+    <p class="note">+DI 在上代表多头主导、−DI 在上代表空头主导；两线交叉即金叉/死叉信号。</p>
+  </div>
+
+  <div class="sec">
+    <h2>③ 趋势强度 ADX</h2>
+    <div class="panel chart-box"><canvas id="adxChart"></canvas></div>
+    <p class="note">ADX 只衡量趋势强弱、不带方向：&lt;20 无趋势（震荡），20~25 过渡，&gt;25 趋势确立；
+      自高位回落往往预示当前趋势动能衰竭、可能反转。灰虚线为 20 / 25 参考线。</p>
+  </div>
+
+  <div class="sec">
+    <h2>④ 历史信号（±DI 交叉 / ADX 穿越，最近 25 条）</h2>
+    <table>
+      <thead><tr><th style="width:120px">日期</th><th style="width:190px">类型</th><th>说明</th><th style="width:90px">触发值</th></tr></thead>
+      <tbody id="sigBody"><tr><td colspan="4" class="muted">加载中…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <h2>⑤ 趋势分段（ADX ≥ 25 的连续区间，最近 12 段）</h2>
+    <table>
+      <thead><tr><th>区间</th><th style="width:70px">交易日</th><th style="width:90px">方向</th><th style="width:100px">ADX 峰值</th><th style="width:120px">区间涨跌</th></tr></thead>
+      <tbody id="segBody"><tr><td colspan="5" class="muted">加载中…</td></tr></tbody>
+    </table>
+    <p class="note">方向由段内平均 ±DI 判定（DMI 原始语义）；当「方向」与「区间涨跌」不一致时，代表动能方向与实际价格背离，值得留意。</p>
+  </div>
+</div>
+
+<script>
+const C = {up:'#d64545', down:'#2e9e5b', adx:'#8e44ad', pdi:'#d64545', mdi:'#2e9e5b',
+           grid:'#eceef1', tick:'#6b7280', line:'#374151'};
+
+function fmt(v, d=2){ return (v===null||v===undefined) ? '—' : Number(v).toFixed(d); }
+function cls(v){ return v>0?'up':(v<0?'down':''); }
+
+const baseOpts = (yTitle) => ({
+  responsive:true, maintainAspectRatio:false, animation:false,
+  interaction:{mode:'index', intersect:false},
+  plugins:{
+    legend:{labels:{boxWidth:12, boxHeight:2, usePointStyle:false, color:'#374151', font:{size:12}}},
+    tooltip:{backgroundColor:'rgba(31,35,40,.92)', padding:8, titleFont:{size:12}, bodyFont:{size:12}}
+  },
+  scales:{
+    x:{grid:{display:false}, ticks:{color:C.tick, maxTicksLimit:8, font:{size:11}}},
+    y:{grid:{color:C.grid}, ticks:{color:C.tick, font:{size:11}}, title:{display:!!yTitle, text:yTitle, color:C.tick, font:{size:11}}}
+  },
+  elements:{point:{radius:0, hoverRadius:3}, line:{borderWidth:1.7, tension:0}}
+});
+
+function line(label, data, color, extra={}){
+  return Object.assign({label, data, borderColor:color, backgroundColor:color, spanGaps:true}, extra);
+}
+
+let priceChart, diChart, adxChart;
+
+async function load(){
+  let d;
+  try{
+    // 静态部署（GitHub Pages）优先用内联快照；本地服务走 /api/report
+    d = window.__REPORT__ || await (await fetch('/api/report')).json();
+  }
+  catch(e){ document.getElementById('badgeDesc').textContent = '读取失败：' + e; return; }
+
+  const dm = d.dmi, st = d.state;
+  document.getElementById('asof').textContent   = d.date;
+  document.getElementById('range').textContent  = d.range[0] + ' ~ ' + d.range[1];
+  document.getElementById('bars').textContent   = d.bars;
+  document.getElementById('price').textContent  = fmt(d.price, 3);
+  const chgEl = document.getElementById('chg');
+  chgEl.textContent = (d.change_pct>0?'+':'') + fmt(d.change_pct) + '%';
+  chgEl.className = 'chg ' + cls(d.change_pct);
+
+  document.getElementById('pdi').textContent  = fmt(dm.plus_di);
+  document.getElementById('mdi').textContent  = fmt(dm.minus_di);
+  document.getElementById('adx').textContent  = fmt(dm.adx);
+  document.getElementById('adxr').textContent = fmt(dm.adxr);
+
+  // 状态徽章
+  const map = {trend_up_strong:['#d64545','多头趋势 · 强'], trend_down_strong:['#2e9e5b','空头趋势 · 强'],
+               trend_up:['#e06c6c','多头趋势'], trend_down:['#5aa86f','空头趋势'],
+               trend_up_fading:['#dc8a5f','多头 · 动能衰竭'], trend_down_fading:['#7aa27e','空头 · 动能衰竭'],
+               range:['#95a5a6','震荡 / 无趋势'], na:['#95a5a6','数据不足']};
+  const [color, tag] = map[st.phase] || ['#95a5a6', st.phase];
+  const tagEl = document.getElementById('badgeTag');
+  tagEl.textContent = tag; tagEl.style.background = color;
+  document.getElementById('badgeDesc').textContent = st.label;
+
+  const labels = d.series.map(s=>s.date);
+
+  // ① 价格
+  if(priceChart) priceChart.destroy();
+  priceChart = new Chart(document.getElementById('priceChart').getContext('2d'), {
+    type:'line',
+    data:{labels, datasets:[line('收盘价', d.series.map(s=>s.close), '#374151', {borderWidth:1.9})]},
+    options: baseOpts('元')
+  });
+
+  // ② ±DI
+  if(diChart) diChart.destroy();
+  diChart = new Chart(document.getElementById('diChart').getContext('2d'), {
+    type:'line',
+    data:{labels, datasets:[
+      line('+DI', d.series.map(s=>s.plus_di), C.pdi),
+      line('−DI', d.series.map(s=>s.minus_di), C.mdi)
+    ]},
+    options: baseOpts('')
+  });
+
+  // ③ ADX
+  if(adxChart) adxChart.destroy();
+  adxChart = new Chart(document.getElementById('adxChart').getContext('2d'), {
+    type:'line',
+    data:{labels, datasets:[
+      line('ADX', d.series.map(s=>s.adx), C.adx, {borderWidth:2}),
+      {label:'25', data:labels.map(()=>25), borderColor:'#c2c8d0', borderWidth:1, borderDash:[5,4], pointRadius:0},
+      {label:'20', data:labels.map(()=>20), borderColor:'#d7dbe0', borderWidth:1, borderDash:[5,4], pointRadius:0}
+    ]},
+    options: baseOpts('')
+  });
+
+  // ④ 信号表
+  const sigKlass = {golden:'golden', death:'death', adx_up:'adx_up', adx_down:'adx_down'};
+  const sigName  = {golden:'金叉', death:'死叉', adx_up:'ADX↑', adx_down:'ADX↓'};
+  const sigs = (d.signals||[]).slice(0,25);
+  document.getElementById('sigBody').innerHTML = sigs.length ? sigs.map(s=>
+    '<tr><td>'+s.date+'</td>'+
+    '<td><span class="pill '+sigKlass[s.kind]+'">'+sigName[s.kind]+'</span></td>'+
+    '<td>'+s.label+'</td><td>'+fmt(s.value)+'</td></tr>'
+  ).join('') : '<tr><td colspan="4" class="muted">暂无信号</td></tr>';
+
+  // ⑤ 分段表
+  const segs = (d.segments||[]).slice(0,12);
+  document.getElementById('segBody').innerHTML = segs.length ? segs.map(s=>
+    '<tr><td>'+s.start+' ~ '+s.end+'</td><td>'+s.days+'</td>'+
+    '<td><span class="pill '+s.direction+'">'+(s.direction==='bull'?'多头':'空头')+'</span></td>'+
+    '<td>'+fmt(s.adx_peak,1)+'</td>'+
+    '<td class="'+cls(s.price_change)+'">'+(s.price_change>0?'+':'')+fmt(s.price_change,1)+'%</td></tr>'
+  ).join('') : '<tr><td colspan="5" class="muted">暂无满足条件的趋势段</td></tr>';
+}
+
+load();
+// 静态快照只需渲染一次；本地服务每 2 分钟自动刷新
+if(!window.__REPORT__) setInterval(load, 120000);
+</script>
+</body>
+</html>
